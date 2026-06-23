@@ -1,101 +1,448 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Gerador de Relatórios</title>
-</head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro Diário – Clínica de Fonoaudiologia</title>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:   #2e7d32;
+      --green-lt:#e8f5e9;
+      --gray:    #555;
+      --radius:  10px;
+      --shadow:  0 2px 16px rgba(0,0,0,.13);
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #e8f5e9 0%, #f4f6f8 100%);
+      color: #222;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .card {
+      max-width: 700px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: var(--green);
+      color: #fff;
+      padding: 22px 24px 18px;
+      text-align: center;
+    }
+    .card-header .subtitle {
+      font-size: 11px;
+      opacity: .85;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .card-header h1 {
+      font-size: 21px;
+      font-weight: 700;
+    }
+
+    .form-body { padding: 24px; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--green);
+      border-bottom: 2px solid var(--green-lt);
+      padding-bottom: 5px;
+      margin: 22px 0 14px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    .field-grid { display: grid; gap: 14px; }
+    .field-grid.two-col { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 480px) { .field-grid.two-col { grid-template-columns: 1fr; } }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray);
+      margin-bottom: 5px;
+    }
+    .field input, .field textarea {
+      width: 100%;
+      border: 1.5px solid #d0d5dd;
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #111;
+      background: #fafafa;
+      transition: border-color .2s, box-shadow .2s;
+      resize: vertical;
+    }
+    .field input:focus, .field textarea:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(46,125,50,.12);
+      background: #fff;
+    }
+    .field textarea { min-height: 95px; }
+
+    .char-hint { font-size: 10px; color: #aaa; text-align: right; margin-top: 3px; }
+
+    .actions {
+      padding: 16px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px;
+      cursor: pointer;
+      transition: filter .15s, transform .1s;
+      font-family: inherit;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary  { background: var(--green); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-secondary { background: #fff; color: var(--green); border: 2px solid var(--green); }
+    .btn-secondary:hover { background: var(--green-lt); }
+
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #323232;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 20px;
+      font-size: 13px;
+      z-index: 9999;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 11px;
+      color: #bbb;
+      padding: 0 24px 20px;
+    }
+  </style>
+</head>
 <body>
 
-  <h2>Gerador de Relatórios</h2>
+<div class="card">
 
-  <label>Nome do(a) Paciente:</label><br>
-  <input id="paciente" type="text"><br><br>
+  <div class="card-header">
+    <div class="subtitle">Universidade Tuiuti do Paraná · Clínica de Fonoaudiologia</div>
+    <h1>📋 Registro Diário</h1>
+  </div>
 
-  <label>Nome do(a) Estagiário(a):</label><br>
-  <input id="estagiario" type="text"><br><br>
+  <div class="form-body">
 
-  <label>Data do Atendimento:</label><br>
-  <input id="dataAtendimento" type="date"><br><br>
+    <div class="section-title">Identificação</div>
+    <div class="field-grid">
+      <div class="field">
+        <label for="paciente">Nome do(a) Paciente *</label>
+        <input type="text" id="paciente" placeholder="Ex: Emily Medeiros" />
+      </div>
+      <div class="field">
+        <label for="estagiario">Nome do(a) Estagiário(a) *</label>
+        <input type="text" id="estagiario" placeholder="Ex: Marina Mourão Belgara" />
+      </div>
+    </div>
 
-  <label>Data da Entrega do Registro:</label><br>
-  <input id="dataEntrega" type="date"><br><br>
+    <div class="field-grid two-col" style="margin-top:14px">
+      <div class="field">
+        <label for="dataAtendimento">Data do Atendimento *</label>
+        <input type="date" id="dataAtendimento" />
+      </div>
+      <div class="field">
+        <label for="dataEntrega">Data da Entrega do Registro *</label>
+        <input type="date" id="dataEntrega" />
+      </div>
+    </div>
 
-  <label>Objetivos Gerais e Específicos:</label><br>
-  <textarea id="objetivos" rows="4"></textarea><br><br>
+    <div class="section-title">Dados Clínicos</div>
 
-  <label>Estratégia:</label><br>
-  <textarea id="estrategia" rows="4"></textarea><br><br>
+    <div class="field-grid">
+      <div class="field">
+        <label for="objetivos">Objetivos Gerais e Específicos *</label>
+        <textarea id="objetivos" placeholder="Descreva os objetivos da sessão…"></textarea>
+        <div class="char-hint" id="cnt-objetivos">0 caracteres</div>
+      </div>
 
-  <label>Desenvolvimento:</label><br>
-  <textarea id="desenvolvimento" rows="6"></textarea><br><br>
+      <div class="field">
+        <label for="estrategias">Estratégia(s) *</label>
+        <textarea id="estrategias" placeholder="Descreva as estratégias utilizadas…"></textarea>
+        <div class="char-hint" id="cnt-estrategias">0 caracteres</div>
+      </div>
 
-  <label>Planejamento / Conduta:</label><br>
-  <textarea id="planejamento" rows="4"></textarea><br><br>
+      <div class="field">
+        <label for="desenvolvimento">Desenvolvimento *</label>
+        <textarea id="desenvolvimento" placeholder="Relate o que ocorreu durante o atendimento…"></textarea>
+        <div class="char-hint" id="cnt-desenvolvimento">0 caracteres</div>
+      </div>
 
-  <button onclick="gerarPDF()">Gerar PDF</button>
+      <div class="field">
+        <label for="planejamento">Planejamento / Conduta *</label>
+        <textarea id="planejamento" placeholder="Descreva o planejamento e conduta para os próximos atendimentos…"></textarea>
+        <div class="char-hint" id="cnt-planejamento">0 caracteres</div>
+      </div>
+    </div>
 
-  <!-- jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  </div>
 
-  <script>
-    function gerarPDF() {
+  <div class="actions">
+    <button class="btn btn-primary" onclick="gerarPDF()">
+      ⬇️ Gerar e Baixar PDF
+    </button>
+    <button class="btn btn-secondary" onclick="limparFormulario()">
+      🗑️ Limpar Formulário
+    </button>
+  </div>
 
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
+  <p class="footer-note">O PDF é gerado localmente no seu dispositivo — nenhum dado é enviado para servidores.</p>
+</div>
 
-      let paciente = document.getElementById("paciente").value;
-      let estagiario = document.getElementById("estagiario").value;
-      let dataAtendimento = document.getElementById("dataAtendimento").value;
-      let dataEntrega = document.getElementById("dataEntrega").value;
+<div id="toast"></div>
 
-      let objetivos = document.getElementById("objetivos").value;
-      let estrategia = document.getElementById("estrategia").value;
-      let desenvolvimento = document.getElementById("desenvolvimento").value;
-      let planejamento = document.getElementById("planejamento").value;
+<script>
+/* ── Utilitários ── */
+function toast(msg, dur) {
+  dur = dur || 2800;
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(function(){ el.style.display = 'none'; }, dur);
+}
 
-      let y = 20;
+function fmtDate(val) {
+  if (!val) return '';
+  var p = val.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
 
-      doc.setFontSize(12);
+/* Contadores */
+['objetivos','estrategias','desenvolvimento','planejamento'].forEach(function(id) {
+  var el  = document.getElementById(id);
+  var cnt = document.getElementById('cnt-' + id);
+  el.addEventListener('input', function(){ cnt.textContent = el.value.length + ' caracteres'; });
+});
 
-      // TÍTULO
-      doc.text("RELATÓRIO DE ATENDIMENTO", 20, y);
-      y += 15;
+/* Limpar */
+function limparFormulario() {
+  ['paciente','estagiario','dataAtendimento','dataEntrega',
+   'objetivos','estrategias','desenvolvimento','planejamento']
+    .forEach(function(id){ document.getElementById(id).value = ''; });
+  ['objetivos','estrategias','desenvolvimento','planejamento']
+    .forEach(function(id){ document.getElementById('cnt-' + id).textContent = '0 caracteres'; });
+  toast('Formulário limpo ✓');
+}
 
-      // IDENTIFICAÇÃO
-      doc.text("Paciente: " + paciente, 20, y);
-      y += 10;
+/* ── Geração do PDF ── */
+function gerarPDF() {
+  var paciente        = document.getElementById('paciente').value.trim();
+  var estagiario      = document.getElementById('estagiario').value.trim();
+  var dataAtendimento = document.getElementById('dataAtendimento').value;
+  var dataEntrega     = document.getElementById('dataEntrega').value;
+  var objetivos       = document.getElementById('objetivos').value.trim();
+  var estrategias     = document.getElementById('estrategias').value.trim();
+  var desenvolvimento = document.getElementById('desenvolvimento').value.trim();
+  var planejamento    = document.getElementById('planejamento').value.trim();
 
-      doc.text("Estagiário(a): " + estagiario, 20, y);
-      y += 10;
+  if (!paciente || !estagiario || !dataAtendimento || !dataEntrega ||
+      !objetivos || !estrategias || !desenvolvimento || !planejamento) {
+    toast('⚠️ Preencha todos os campos obrigatórios.');
+    return;
+  }
 
-      doc.text("Data do Atendimento: " + dataAtendimento, 20, y);
-      y += 10;
+  toast('Gerando PDF…');
 
-      doc.text("Data da Entrega: " + dataEntrega, 20, y);
-      y += 15;
+  var jsPDF = window.jspdf.jsPDF;
+  var doc   = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-      // FUNÇÃO AUXILIAR PARA TEXTO GRANDE
-      function addTexto(titulo, texto) {
-        doc.text(titulo, 20, y);
-        y += 7;
+  // A4 landscape: 297 × 210 mm
+  var PW = 297, PH = 210;
+  var ML = 15,  MR = 15, MT = 14;
+  var CW = PW - ML - MR; // 267 mm
 
-        let linhas = doc.splitTextToSize(texto, 170);
-        doc.text(linhas, 20, y);
+  /* helpers */
+  function sf(style, size) {
+    doc.setFont('helvetica', style || 'normal');
+    doc.setFontSize(size || 9);
+  }
+  function sc(r, g, b) { doc.setTextColor(r, g, b); }
 
-        y += linhas.length * 7 + 8;
-      }
+  /* ═══ CABEÇALHO ═══ */
+  var y = MT;
 
-      // CONTEÚDO
-      addTexto("Objetivos Gerais e Específicos:", objetivos);
-      addTexto("Estratégia:", estrategia);
-      addTexto("Desenvolvimento:", desenvolvimento);
-      addTexto("Planejamento / Conduta:", planejamento);
+  // Instituição
+  sf('bolditalic', 9); sc(60, 60, 60);
+  doc.text('Universidade Tuiuti do Paraná \u2013 Clínica de Fonoaudiologia', ML, y);
 
-      // SALVAR PDF
-      doc.save("Relatorio_" + paciente + ".pdf");
-    }
-  </script>
+  // Logo placeholder (canto superior direito)
+  var lx = PW - MR - 22, ly = y - 7, lw = 22, lh = 20;
+  doc.setDrawColor(46, 125, 50);
+  doc.setFillColor(255, 255, 255);
+  doc.setLineWidth(0.7);
+  doc.roundedRect(lx, ly, lw, lh, 2.5, 2.5, 'FD');
+  sf('bold', 8); sc(46, 125, 50);
+  doc.text('UTP', lx + lw / 2, ly + lh / 2 + 1, { align: 'center' });
+  sf('normal', 6); sc(60, 60, 60);
+  doc.text('Promoção Humana', lx + lw / 2, ly + lh / 2 + 5, { align: 'center' });
 
+  // Linha divisória
+  y += 3;
+  doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
+  doc.line(ML, y, PW - MR, y);
+
+  // Título
+  y += 8;
+  sf('bold', 13); sc(0, 0, 0);
+  doc.text('REGISTRO DIÁRIO', PW / 2, y, { align: 'center' });
+
+  /* ═══ DADOS ═══ */
+  y += 7;
+
+  // Paciente
+  sf('bold', 9); sc(0,0,0);
+  doc.text('NOME DO(A) PACIENTE: ', ML, y);
+  sf('normal', 9);
+  doc.text(paciente, ML + doc.getTextWidth('NOME DO(A) PACIENTE: '), y);
+
+  // Estagiário
+  y += 5.5;
+  sf('bold', 9);
+  doc.text('NOME DO(A) ESTAGIÁRIO(A): ', ML, y);
+  sf('normal', 9);
+  doc.text(estagiario, ML + doc.getTextWidth('NOME DO(A) ESTAGIÁRIO(A): '), y);
+
+  // Datas
+  y += 5.5;
+  var dtA = fmtDate(dataAtendimento);
+  var dtE = fmtDate(dataEntrega);
+
+  sf('bold', 9);
+  doc.text('DATA DO ATENDIMENTO: ', ML, y);
+  sf('normal', 9);
+  doc.text(dtA, ML + doc.getTextWidth('DATA DO ATENDIMENTO: '), y);
+
+  var labelE = 'DATA DA ENTREGA DO REGISTRO: ';
+  sf('bold', 9);
+  var wE  = doc.getTextWidth(labelE + dtE);
+  var xE  = PW - MR - wE;
+  doc.text(labelE, xE, y);
+  sf('normal', 9);
+  doc.text(dtE, xE + doc.getTextWidth(labelE), y);
+
+  /* ═══ TABELA ═══ */
+  y += 6;
+
+  // Cabeçalhos com quebra manual
+  var col1H = 'OBJETIVOS GERAIS\nE ESPECÍFICOS';
+  var col2H = 'ESTRATÉGIA(S)';
+  var col3H = 'DESENVOLVIMENTO';
+  var col4H = 'PLANEJAMENTO / CONDUTA';
+
+  // Larguras proporcionais ao modelo
+  var c1 = CW * 0.185;
+  var c2 = CW * 0.185;
+  var c3 = CW * 0.315;
+  var c4 = CW * 0.315;
+
+  // Altura disponível para a tabela (reserva rodapé)
+  var tableMaxH = PH - y - 20;
+
+  doc.autoTable({
+    startY: y,
+    margin: { left: ML, right: MR },
+    tableWidth: CW,
+
+    head: [[ col1H, col2H, col3H, col4H ]],
+    body: [[ objetivos, estrategias, desenvolvimento, planejamento ]],
+
+    columnStyles: {
+      0: { cellWidth: c1 },
+      1: { cellWidth: c2 },
+      2: { cellWidth: c3 },
+      3: { cellWidth: c4 }
+    },
+
+    headStyles: {
+      fillColor:   [255, 255, 255],
+      textColor:   [0, 0, 0],
+      fontStyle:   'bold',
+      fontSize:    8,
+      halign:      'center',
+      valign:      'middle',
+      lineWidth:   0.4,
+      lineColor:   [0, 0, 0],
+      cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
+      minCellHeight: 10
+    },
+
+    bodyStyles: {
+      fillColor:   [255, 255, 255],
+      textColor:   [0, 0, 0],
+      fontSize:    8,
+      fontStyle:   'normal',
+      halign:      'left',
+      valign:      'top',
+      lineWidth:   0.4,
+      lineColor:   [0, 0, 0],
+      cellPadding: { top: 3, bottom: 3, left: 2.5, right: 2.5 },
+      overflow:    'linebreak',
+      minCellHeight: tableMaxH - 12
+    },
+
+    alternateRowStyles: { fillColor: [255,255,255] },
+    rowPageBreak: 'avoid',
+    showHead: 'everyPage'
+  });
+
+  /* ═══ ASSINATURAS ═══ */
+  var finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : PH - 22;
+  var sigY   = Math.min(finalY + 10, PH - 8);
+
+  var sig1X  = ML + CW * 0.16;
+  var sig2X  = ML + CW * 0.60;
+  var sigLen = CW * 0.22;
+
+  doc.setDrawColor(0,0,0); doc.setLineWidth(0.4);
+  doc.line(sig1X, sigY, sig1X + sigLen, sigY);
+  doc.line(sig2X, sigY, sig2X + sigLen, sigY);
+
+  sf('normal', 8); sc(0,0,0);
+  doc.text('Assinatura supervisor(a)',  sig1X + sigLen / 2, sigY + 4, { align: 'center' });
+  doc.text('Assinatura estagiário(a)', sig2X + sigLen / 2, sigY + 4, { align: 'center' });
+
+  /* ═══ SALVAR ═══ */
+  var nome = 'RegistroDiario_' + paciente.replace(/\s+/g,'_') + '_' + dtA.replace(/\//g,'-') + '.pdf';
+  doc.save(nome);
+  toast('✅ PDF gerado com sucesso!');
+}
+</script>
 </body>
 </html>
