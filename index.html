@@ -1,447 +1,704 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Registro Diário – Clínica de Fonoaudiologia</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Registro Diário – Fonoaudiologia UTP</title>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- jsPDF + AutoTable -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- docx.js -->
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<!-- FileSaver -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<style>
+/* ─── Reset ─── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
 
-    :root {
-      --green:   #2e7d32;
-      --green-lt:#e8f5e9;
-      --gray:    #555;
-      --radius:  10px;
-      --shadow:  0 2px 16px rgba(0,0,0,.13);
-    }
+/* ─── Tokens ─── */
+:root{
+  --ink:#1a1a2e;
+  --ink2:#3d3d5c;
+  --green:#1b5e20;
+  --green-mid:#2e7d32;
+  --green-lt:#43a047;
+  --green-bg:#f1f8e9;
+  --border:#c8d8c0;
+  --surface:#ffffff;
+  --surface2:#f8faf6;
+  --radius:12px;
+  --radius-sm:6px;
+  --shadow:0 2px 20px rgba(27,94,32,.10);
+  --shadow-md:0 6px 32px rgba(27,94,32,.16);
+  --font:'Segoe UI',system-ui,Arial,sans-serif;
+  --mono:'Courier New',monospace;
+}
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: linear-gradient(135deg, #e8f5e9 0%, #f4f6f8 100%);
-      color: #222;
-      min-height: 100vh;
-      padding: 16px;
-    }
+body{font-family:var(--font);background:var(--surface2);color:var(--ink);min-height:100vh}
 
-    .card {
-      max-width: 700px;
-      margin: 0 auto;
-      background: #fff;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
+/* ─── Layout shell ─── */
+.app{display:flex;flex-direction:column;min-height:100vh}
 
-    .card-header {
-      background: var(--green);
-      color: #fff;
-      padding: 22px 24px 18px;
-      text-align: center;
-    }
-    .card-header .subtitle {
-      font-size: 11px;
-      opacity: .85;
-      letter-spacing: .6px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .card-header h1 {
-      font-size: 21px;
-      font-weight: 700;
-    }
+/* ─── Top bar ─── */
+.topbar{
+  background:linear-gradient(135deg,var(--green) 0%,var(--green-mid) 100%);
+  color:#fff;padding:18px 20px 16px;
+  display:flex;align-items:center;gap:14px;
+  box-shadow:0 2px 12px rgba(0,0,0,.18);
+  position:sticky;top:0;z-index:100;
+}
+.topbar-logo{
+  width:42px;height:42px;border-radius:8px;
+  background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.topbar-text h1{font-size:16px;font-weight:700;line-height:1.2}
+.topbar-text p{font-size:11px;opacity:.8;margin-top:1px}
 
-    .form-body { padding: 24px; }
+/* ─── Tab nav ─── */
+.tab-nav{
+  display:flex;background:#fff;
+  border-bottom:2px solid var(--border);
+  position:sticky;top:76px;z-index:99;
+}
+.tab-btn{
+  flex:1;padding:12px 6px;border:none;background:none;
+  font:600 13px var(--font);color:var(--ink2);cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-2px;
+  transition:color .2s,border-color .2s;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.tab-btn.active{color:var(--green-mid);border-bottom-color:var(--green-mid)}
+.tab-btn:hover:not(.active){color:var(--green-lt)}
 
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--green);
-      border-bottom: 2px solid var(--green-lt);
-      padding-bottom: 5px;
-      margin: 22px 0 14px;
-    }
-    .section-title:first-child { margin-top: 0; }
+/* ─── Tab panels ─── */
+.tab-panel{display:none;padding:20px 16px 32px}
+.tab-panel.active{display:block}
 
-    .field-grid { display: grid; gap: 14px; }
-    .field-grid.two-col { grid-template-columns: 1fr 1fr; }
-    @media (max-width: 480px) { .field-grid.two-col { grid-template-columns: 1fr; } }
+/* ─── Section label ─── */
+.sec-label{
+  font-size:10.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1.1px;color:var(--green-mid);
+  border-left:3px solid var(--green-mid);
+  padding-left:8px;margin:22px 0 13px;
+}
+.sec-label:first-child{margin-top:0}
 
-    .field label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--gray);
-      margin-bottom: 5px;
-    }
-    .field input, .field textarea {
-      width: 100%;
-      border: 1.5px solid #d0d5dd;
-      border-radius: 6px;
-      padding: 9px 11px;
-      font-size: 14px;
-      font-family: inherit;
-      color: #111;
-      background: #fafafa;
-      transition: border-color .2s, box-shadow .2s;
-      resize: vertical;
-    }
-    .field input:focus, .field textarea:focus {
-      outline: none;
-      border-color: var(--green);
-      box-shadow: 0 0 0 3px rgba(46,125,50,.12);
-      background: #fff;
-    }
-    .field textarea { min-height: 95px; }
+/* ─── Field ─── */
+.field{margin-bottom:14px}
+.field label{
+  display:block;font-size:12px;font-weight:600;
+  color:var(--ink2);margin-bottom:5px;
+}
+.field input,.field textarea{
+  width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  padding:10px 12px;font:14px var(--font);color:var(--ink);
+  background:var(--surface);
+  transition:border-color .2s,box-shadow .2s;resize:vertical;
+}
+.field input:focus,.field textarea:focus{
+  outline:none;border-color:var(--green-mid);
+  box-shadow:0 0 0 3px rgba(46,125,50,.13);
+}
+.field textarea{min-height:100px;line-height:1.5}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:460px){.two-col{grid-template-columns:1fr}}
 
-    .char-hint { font-size: 10px; color: #aaa; text-align: right; margin-top: 3px; }
+/* ─── Action row ─── */
+.action-row{
+  display:grid;gap:10px;
+  margin-top:24px;
+}
+.action-row.four{grid-template-columns:1fr 1fr}
+@media(max-width:400px){.action-row.four{grid-template-columns:1fr}}
 
-    .actions {
-      padding: 16px 24px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
+.btn{
+  display:flex;align-items:center;justify-content:center;
+  gap:7px;border:none;border-radius:var(--radius-sm);
+  font:600 14px var(--font);padding:13px 10px;
+  cursor:pointer;transition:filter .15s,transform .1s,box-shadow .15s;
+  line-height:1.2;text-align:center;
+}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:var(--green-mid);color:#fff;box-shadow:0 2px 8px rgba(46,125,50,.3)}
+.btn-primary:hover{filter:brightness(1.08);box-shadow:0 4px 14px rgba(46,125,50,.35)}
+.btn-ghost{background:#fff;color:var(--green-mid);border:2px solid var(--green-mid)}
+.btn-ghost:hover{background:var(--green-bg)}
+.btn-dark{background:var(--green);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.btn-dark:hover{filter:brightness(1.1)}
+.btn-outline{background:var(--surface2);color:var(--ink2);border:1.5px solid var(--border)}
+.btn-outline:hover{border-color:var(--green-lt);color:var(--green-mid)}
 
-    .btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 600;
-      padding: 14px;
-      cursor: pointer;
-      transition: filter .15s, transform .1s;
-      font-family: inherit;
-    }
-    .btn:active { transform: scale(.97); }
-    .btn-primary  { background: var(--green); color: #fff; }
-    .btn-primary:hover { filter: brightness(1.08); }
-    .btn-secondary { background: #fff; color: var(--green); border: 2px solid var(--green); }
-    .btn-secondary:hover { background: var(--green-lt); }
+/* ─── Preview panel ─── */
+#previewPanel{
+  background:#fff;border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.preview-actions{
+  display:flex;gap:8px;flex-wrap:wrap;
+  padding:14px 16px;border-bottom:1.5px solid var(--border);
+  background:var(--green-bg);
+}
 
-    #toast {
-      display: none;
-      position: fixed;
-      bottom: 22px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #323232;
-      color: #fff;
-      padding: 10px 22px;
-      border-radius: 20px;
-      font-size: 13px;
-      z-index: 9999;
-    }
+/* The actual preview that mimics the doc */
+#docPreview{
+  padding:20px;
+  font-family:'Times New Roman',Times,serif;
+  font-size:13px;
+  line-height:1.45;
+  color:#000;
+  min-height:200px;
+}
+.prev-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+.prev-inst{font-style:italic;font-weight:bold;font-size:11px}
+.prev-logo-box{
+  border:1.5px solid #2e7d32;
+  border-radius:4px;
+  width:52px;height:46px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;
+}
+.prev-logo-box .utp{font-weight:700;font-size:12px;color:#2e7d32;font-family:Arial,sans-serif}
+.prev-logo-box .ph{font-size:7px;color:#555;font-family:Arial,sans-serif}
+.prev-divider{border:none;border-top:0.5px solid #999;margin:4px 0 8px}
+.prev-title{text-align:center;font-weight:bold;font-size:14px;margin-bottom:10px;font-family:Arial,sans-serif}
+.prev-meta{font-family:Arial,sans-serif;font-size:10px;margin-bottom:4px}
+.prev-meta strong{font-weight:700}
+.prev-meta-row{display:flex;justify-content:space-between;margin-bottom:3px}
+.prev-table{
+  width:100%;border-collapse:collapse;margin-top:10px;
+  font-family:Arial,sans-serif;font-size:9.5px;
+}
+.prev-table th{
+  border:1px solid #000;padding:5px 5px;
+  font-weight:bold;text-align:center;
+  vertical-align:middle;font-size:9px;
+}
+.prev-table td{
+  border:1px solid #000;padding:5px 5px;
+  vertical-align:top;white-space:pre-wrap;
+  font-size:9px;line-height:1.4;
+}
+.prev-sigs{
+  display:flex;
+  justify-content:space-around;
+  margin-top:18px;
+  font-family:Arial,sans-serif;
+  font-size:9px;
+}
+.prev-sig{text-align:center}
+.prev-sig .line{
+  width:140px;border-top:1px solid #000;
+  margin:0 auto 4px;
+}
 
-    .footer-note {
-      text-align: center;
-      font-size: 11px;
-      color: #bbb;
-      padding: 0 24px 20px;
-    }
-  </style>
+/* ─── Empty state ─── */
+.empty-preview{
+  padding:40px 20px;text-align:center;
+  color:#aaa;font-family:var(--font);
+}
+.empty-preview .icon{font-size:36px;margin-bottom:10px}
+.empty-preview p{font-size:13px}
+
+/* ─── Toast ─── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#1b1b2e;color:#fff;padding:10px 20px;
+  border-radius:20px;font-size:13px;
+  z-index:9999;opacity:0;transition:opacity .25s,transform .25s;
+  pointer-events:none;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ─── Footer ─── */
+.footer{
+  text-align:center;font-size:11px;color:#bbb;
+  padding:14px 16px 24px;margin-top:auto;
+}
+</style>
 </head>
 <body>
+<div class="app">
 
-<div class="card">
-
-  <div class="card-header">
-    <div class="subtitle">Universidade Tuiuti do Paraná · Clínica de Fonoaudiologia</div>
-    <h1>📋 Registro Diário</h1>
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-logo">📋</div>
+  <div class="topbar-text">
+    <h1>Registro Diário</h1>
+    <p>Clínica de Fonoaudiologia · UTP</p>
   </div>
-
-  <div class="form-body">
-
-    <div class="section-title">Identificação</div>
-    <div class="field-grid">
-      <div class="field">
-        <label for="paciente">Nome do(a) Paciente *</label>
-        <input type="text" id="paciente" placeholder="Ex: Emily Medeiros" />
-      </div>
-      <div class="field">
-        <label for="estagiario">Nome do(a) Estagiário(a) *</label>
-        <input type="text" id="estagiario" placeholder="Ex: Marina Mourão Belgara" />
-      </div>
-    </div>
-
-    <div class="field-grid two-col" style="margin-top:14px">
-      <div class="field">
-        <label for="dataAtendimento">Data do Atendimento *</label>
-        <input type="date" id="dataAtendimento" />
-      </div>
-      <div class="field">
-        <label for="dataEntrega">Data da Entrega do Registro *</label>
-        <input type="date" id="dataEntrega" />
-      </div>
-    </div>
-
-    <div class="section-title">Dados Clínicos</div>
-
-    <div class="field-grid">
-      <div class="field">
-        <label for="objetivos">Objetivos Gerais e Específicos *</label>
-        <textarea id="objetivos" placeholder="Descreva os objetivos da sessão…"></textarea>
-        <div class="char-hint" id="cnt-objetivos">0 caracteres</div>
-      </div>
-
-      <div class="field">
-        <label for="estrategias">Estratégia(s) *</label>
-        <textarea id="estrategias" placeholder="Descreva as estratégias utilizadas…"></textarea>
-        <div class="char-hint" id="cnt-estrategias">0 caracteres</div>
-      </div>
-
-      <div class="field">
-        <label for="desenvolvimento">Desenvolvimento *</label>
-        <textarea id="desenvolvimento" placeholder="Relate o que ocorreu durante o atendimento…"></textarea>
-        <div class="char-hint" id="cnt-desenvolvimento">0 caracteres</div>
-      </div>
-
-      <div class="field">
-        <label for="planejamento">Planejamento / Conduta *</label>
-        <textarea id="planejamento" placeholder="Descreva o planejamento e conduta para os próximos atendimentos…"></textarea>
-        <div class="char-hint" id="cnt-planejamento">0 caracteres</div>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="actions">
-    <button class="btn btn-primary" onclick="gerarPDF()">
-      ⬇️ Gerar e Baixar PDF
-    </button>
-    <button class="btn btn-secondary" onclick="limparFormulario()">
-      🗑️ Limpar Formulário
-    </button>
-  </div>
-
-  <p class="footer-note">O PDF é gerado localmente no seu dispositivo — nenhum dado é enviado para servidores.</p>
 </div>
+
+<!-- Tab nav -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('form',this)">✏️ Formulário</button>
+  <button class="tab-btn" onclick="switchTab('preview',this)">👁️ Prévia</button>
+</div>
+
+<!-- ═══════════ TAB: FORMULÁRIO ═══════════ -->
+<div id="tab-form" class="tab-panel active">
+
+  <div class="sec-label">Identificação</div>
+
+  <div class="field">
+    <label for="paciente">Nome do(a) Paciente *</label>
+    <input type="text" id="paciente" placeholder="Ex: Emily Medeiros"/>
+  </div>
+  <div class="field">
+    <label for="estagiario">Nome do(a) Estagiário(a) *</label>
+    <input type="text" id="estagiario" placeholder="Ex: Marina Mourão Belgara"/>
+  </div>
+  <div class="two-col">
+    <div class="field">
+      <label for="dataAtend">Data do Atendimento *</label>
+      <input type="date" id="dataAtend"/>
+    </div>
+    <div class="field">
+      <label for="dataEntrega">Data da Entrega *</label>
+      <input type="date" id="dataEntrega"/>
+    </div>
+  </div>
+
+  <div class="sec-label">Dados Clínicos</div>
+
+  <div class="field">
+    <label for="objetivos">Objetivos Gerais e Específicos *</label>
+    <textarea id="objetivos" rows="5" placeholder="Descreva os objetivos da sessão…"></textarea>
+  </div>
+  <div class="field">
+    <label for="estrategias">Estratégia(s) *</label>
+    <textarea id="estrategias" rows="5" placeholder="Descreva as estratégias utilizadas…"></textarea>
+  </div>
+  <div class="field">
+    <label for="desenvolvimento">Desenvolvimento *</label>
+    <textarea id="desenvolvimento" rows="5" placeholder="Relate o que ocorreu durante o atendimento…"></textarea>
+  </div>
+  <div class="field">
+    <label for="planejamento">Planejamento / Conduta *</label>
+    <textarea id="planejamento" rows="5" placeholder="Descreva o planejamento e conduta…"></textarea>
+  </div>
+
+  <div class="action-row">
+    <button class="btn btn-primary" style="grid-column:1/-1" onclick="irParaPrevia()">
+      👁️ Visualizar Documento
+    </button>
+  </div>
+
+</div><!-- /tab-form -->
+
+<!-- ═══════════ TAB: PRÉVIA ═══════════ -->
+<div id="tab-preview" class="tab-panel">
+
+  <div id="previewPanel">
+    <div class="preview-actions">
+      <button class="btn btn-ghost" onclick="switchTab('form',document.querySelectorAll('.tab-btn')[0])">
+        ✏️ Editar
+      </button>
+      <button class="btn btn-primary" onclick="baixarPDF()">⬇️ PDF</button>
+      <button class="btn btn-dark" onclick="baixarWord()">📄 Word</button>
+      <button class="btn btn-outline" onclick="baixarAmbos()">📦 Ambos</button>
+    </div>
+    <div id="docPreview">
+      <div class="empty-preview">
+        <div class="icon">📄</div>
+        <p>Preencha o formulário e clique em<br><strong>Visualizar Documento</strong></p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-preview -->
+
+<div class="footer">Gerado localmente · nenhum dado é enviado para servidores</div>
+</div><!-- /app -->
 
 <div id="toast"></div>
 
 <script>
-/* ── Utilitários ── */
-function toast(msg, dur) {
-  dur = dur || 2800;
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(function(){ el.style.display = 'none'; }, dur);
+/* ─────────────────────────────────────────
+   Helpers
+───────────────────────────────────────── */
+function fmt(v){if(!v)return '';var p=v.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+
+function toast(msg,dur){
+  dur=dur||2800;
+  var el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show')},dur);
 }
 
-function fmtDate(val) {
-  if (!val) return '';
-  var p = val.split('-');
-  return p[2] + '/' + p[1] + '/' + p[0];
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
 }
 
-/* Contadores */
-['objetivos','estrategias','desenvolvimento','planejamento'].forEach(function(id) {
-  var el  = document.getElementById(id);
-  var cnt = document.getElementById('cnt-' + id);
-  el.addEventListener('input', function(){ cnt.textContent = el.value.length + ' caracteres'; });
-});
-
-/* Limpar */
-function limparFormulario() {
-  ['paciente','estagiario','dataAtendimento','dataEntrega',
-   'objetivos','estrategias','desenvolvimento','planejamento']
-    .forEach(function(id){ document.getElementById(id).value = ''; });
-  ['objetivos','estrategias','desenvolvimento','planejamento']
-    .forEach(function(id){ document.getElementById('cnt-' + id).textContent = '0 caracteres'; });
-  toast('Formulário limpo ✓');
+function coletarDados(){
+  return {
+    paciente:        document.getElementById('paciente').value.trim(),
+    estagiario:      document.getElementById('estagiario').value.trim(),
+    dataAtend:       document.getElementById('dataAtend').value,
+    dataEntrega:     document.getElementById('dataEntrega').value,
+    objetivos:       document.getElementById('objetivos').value.trim(),
+    estrategias:     document.getElementById('estrategias').value.trim(),
+    desenvolvimento: document.getElementById('desenvolvimento').value.trim(),
+    planejamento:    document.getElementById('planejamento').value.trim()
+  };
 }
 
-/* ── Geração do PDF ── */
-function gerarPDF() {
-  var paciente        = document.getElementById('paciente').value.trim();
-  var estagiario      = document.getElementById('estagiario').value.trim();
-  var dataAtendimento = document.getElementById('dataAtendimento').value;
-  var dataEntrega     = document.getElementById('dataEntrega').value;
-  var objetivos       = document.getElementById('objetivos').value.trim();
-  var estrategias     = document.getElementById('estrategias').value.trim();
-  var desenvolvimento = document.getElementById('desenvolvimento').value.trim();
-  var planejamento    = document.getElementById('planejamento').value.trim();
+function validar(d){
+  var campos=[d.paciente,d.estagiario,d.dataAtend,d.dataEntrega,
+              d.objetivos,d.estrategias,d.desenvolvimento,d.planejamento];
+  return campos.every(function(c){return c&&c!==''});
+}
 
-  if (!paciente || !estagiario || !dataAtendimento || !dataEntrega ||
-      !objetivos || !estrategias || !desenvolvimento || !planejamento) {
-    toast('⚠️ Preencha todos os campos obrigatórios.');
-    return;
-  }
+/* ─────────────────────────────────────────
+   PRÉ-VISUALIZAÇÃO
+───────────────────────────────────────── */
+function renderPrevia(d){
+  var el=document.getElementById('docPreview');
+  el.innerHTML=[
+    '<div class="prev-header">',
+      '<div class="prev-inst">Universidade Tuiuti do Paraná \u2013 Cl\u00ednica de Fonoaudiologia</div>',
+      '<div class="prev-logo-box"><span class="utp">UTP</span><span class="ph">Promo\u00e7\u00e3o Humana</span></div>',
+    '</div>',
+    '<hr class="prev-divider"/>',
+    '<div class="prev-title">REGISTRO DI\u00c1RIO</div>',
+    '<div class="prev-meta"><strong>NOME DO(A) PACIENTE:</strong> '+esc(d.paciente)+'</div>',
+    '<div class="prev-meta"><strong>NOME DO(A) ESTAGI\u00c1RIO(A):</strong> '+esc(d.estagiario)+'</div>',
+    '<div class="prev-meta-row">',
+      '<div><strong>DATA DO ATENDIMENTO:</strong> '+fmt(d.dataAtend)+'</div>',
+      '<div><strong>DATA DA ENTREGA DO REGISTRO:</strong> '+fmt(d.dataEntrega)+'</div>',
+    '</div>',
+    '<table class="prev-table">',
+      '<thead><tr>',
+        '<th style="width:22%">OBJETIVOS GERAIS<br>E ESPEC\u00cdFICOS</th>',
+        '<th style="width:22%">ESTRAT\u00c9GIA(S)</th>',
+        '<th style="width:28%">DESENVOLVIMENTO</th>',
+        '<th style="width:28%">PLANEJAMENTO / CONDUTA</th>',
+      '</tr></thead>',
+      '<tbody><tr>',
+        '<td>'+esc(d.objetivos)+'</td>',
+        '<td>'+esc(d.estrategias)+'</td>',
+        '<td>'+esc(d.desenvolvimento)+'</td>',
+        '<td>'+esc(d.planejamento)+'</td>',
+      '</tr></tbody>',
+    '</table>',
+    '<div class="prev-sigs">',
+      '<div class="prev-sig"><div class="line"></div>Assinatura supervisor(a)</div>',
+      '<div class="prev-sig"><div class="line"></div>Assinatura estagi\u00e1rio(a)</div>',
+    '</div>'
+  ].join('');
+}
 
-  toast('Gerando PDF…');
+function esc(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
 
-  var jsPDF = window.jspdf.jsPDF;
-  var doc   = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+function irParaPrevia(){
+  var d=coletarDados();
+  if(!validar(d)){toast('⚠️ Preencha todos os campos obrigatórios.');return;}
+  renderPrevia(d);
+  var btn=document.querySelectorAll('.tab-btn')[1];
+  switchTab('preview',btn);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 
-  // A4 landscape: 297 × 210 mm
-  var PW = 297, PH = 210;
-  var ML = 15,  MR = 15, MT = 14;
-  var CW = PW - ML - MR; // 267 mm
+/* ─────────────────────────────────────────
+   PDF
+───────────────────────────────────────── */
+function gerarPDF(d){
+  var jsPDF=window.jspdf.jsPDF;
+  var doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
 
-  /* helpers */
-  function sf(style, size) {
-    doc.setFont('helvetica', style || 'normal');
-    doc.setFontSize(size || 9);
-  }
-  function sc(r, g, b) { doc.setTextColor(r, g, b); }
+  var PW=297,PH=210,ML=15,MR=15,MT=14;
+  var CW=PW-ML-MR;
 
-  /* ═══ CABEÇALHO ═══ */
-  var y = MT;
+  function sf(sty,sz){doc.setFont('helvetica',sty||'normal');doc.setFontSize(sz||9)}
+  function sc(r,g,b){doc.setTextColor(r,g,b)}
+
+  var y=MT;
 
   // Instituição
-  sf('bolditalic', 9); sc(60, 60, 60);
-  doc.text('Universidade Tuiuti do Paraná \u2013 Clínica de Fonoaudiologia', ML, y);
+  sf('bolditalic',9);sc(50,50,50);
+  doc.text('Universidade Tuiuti do Paran\u00e1 \u2013 Cl\u00ednica de Fonoaudiologia',ML,y);
 
-  // Logo placeholder (canto superior direito)
-  var lx = PW - MR - 22, ly = y - 7, lw = 22, lh = 20;
-  doc.setDrawColor(46, 125, 50);
-  doc.setFillColor(255, 255, 255);
-  doc.setLineWidth(0.7);
-  doc.roundedRect(lx, ly, lw, lh, 2.5, 2.5, 'FD');
-  sf('bold', 8); sc(46, 125, 50);
-  doc.text('UTP', lx + lw / 2, ly + lh / 2 + 1, { align: 'center' });
-  sf('normal', 6); sc(60, 60, 60);
-  doc.text('Promoção Humana', lx + lw / 2, ly + lh / 2 + 5, { align: 'center' });
+  // Logo box
+  var lx=PW-MR-24,ly=y-7,lw=24,lh=22;
+  doc.setDrawColor(46,125,50);doc.setFillColor(255,255,255);doc.setLineWidth(0.7);
+  doc.roundedRect(lx,ly,lw,lh,2.5,2.5,'FD');
+  sf('bold',9);sc(46,125,50);
+  doc.text('UTP',lx+lw/2,ly+lh/2,{align:'center'});
+  sf('normal',6);sc(80,80,80);
+  doc.text('Promo\u00e7\u00e3o Humana',lx+lw/2,ly+lh/2+5,{align:'center'});
 
-  // Linha divisória
-  y += 3;
-  doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
-  doc.line(ML, y, PW - MR, y);
+  // Divisória
+  y+=3;
+  doc.setDrawColor(180,180,180);doc.setLineWidth(0.3);
+  doc.line(ML,y,PW-MR,y);
 
   // Título
-  y += 8;
-  sf('bold', 13); sc(0, 0, 0);
-  doc.text('REGISTRO DIÁRIO', PW / 2, y, { align: 'center' });
+  y+=8;sf('bold',13);sc(0,0,0);
+  doc.text('REGISTRO DI\u00c1RIO',PW/2,y,{align:'center'});
 
-  /* ═══ DADOS ═══ */
-  y += 7;
+  // Dados
+  y+=7;
+  sf('bold',9);sc(0,0,0);doc.text('NOME DO(A) PACIENTE: ',ML,y);
+  sf('normal',9);doc.text(d.paciente,ML+doc.getTextWidth('NOME DO(A) PACIENTE: '),y);
 
-  // Paciente
-  sf('bold', 9); sc(0,0,0);
-  doc.text('NOME DO(A) PACIENTE: ', ML, y);
-  sf('normal', 9);
-  doc.text(paciente, ML + doc.getTextWidth('NOME DO(A) PACIENTE: '), y);
+  y+=5.5;
+  sf('bold',9);doc.text('NOME DO(A) ESTAGI\u00c1RIO(A): ',ML,y);
+  sf('normal',9);doc.text(d.estagiario,ML+doc.getTextWidth('NOME DO(A) ESTAGI\u00c1RIO(A): '),y);
 
-  // Estagiário
-  y += 5.5;
-  sf('bold', 9);
-  doc.text('NOME DO(A) ESTAGIÁRIO(A): ', ML, y);
-  sf('normal', 9);
-  doc.text(estagiario, ML + doc.getTextWidth('NOME DO(A) ESTAGIÁRIO(A): '), y);
+  y+=5.5;
+  sf('bold',9);doc.text('DATA DO ATENDIMENTO: ',ML,y);
+  sf('normal',9);doc.text(fmt(d.dataAtend),ML+doc.getTextWidth('DATA DO ATENDIMENTO: '),y);
 
-  // Datas
-  y += 5.5;
-  var dtA = fmtDate(dataAtendimento);
-  var dtE = fmtDate(dataEntrega);
+  var labelE='DATA DA ENTREGA DO REGISTRO: ';
+  sf('bold',9);
+  var xE=PW-MR-doc.getTextWidth(labelE+fmt(d.dataEntrega));
+  doc.text(labelE,xE,y);
+  sf('normal',9);doc.text(fmt(d.dataEntrega),xE+doc.getTextWidth(labelE),y);
 
-  sf('bold', 9);
-  doc.text('DATA DO ATENDIMENTO: ', ML, y);
-  sf('normal', 9);
-  doc.text(dtA, ML + doc.getTextWidth('DATA DO ATENDIMENTO: '), y);
-
-  var labelE = 'DATA DA ENTREGA DO REGISTRO: ';
-  sf('bold', 9);
-  var wE  = doc.getTextWidth(labelE + dtE);
-  var xE  = PW - MR - wE;
-  doc.text(labelE, xE, y);
-  sf('normal', 9);
-  doc.text(dtE, xE + doc.getTextWidth(labelE), y);
-
-  /* ═══ TABELA ═══ */
-  y += 6;
-
-  // Cabeçalhos com quebra manual
-  var col1H = 'OBJETIVOS GERAIS\nE ESPECÍFICOS';
-  var col2H = 'ESTRATÉGIA(S)';
-  var col3H = 'DESENVOLVIMENTO';
-  var col4H = 'PLANEJAMENTO / CONDUTA';
-
-  // Larguras proporcionais ao modelo
-  var c1 = CW * 0.185;
-  var c2 = CW * 0.185;
-  var c3 = CW * 0.315;
-  var c4 = CW * 0.315;
-
-  // Altura disponível para a tabela (reserva rodapé)
-  var tableMaxH = PH - y - 20;
+  y+=6;
+  var tableH=PH-y-22;
+  var c1=CW*.185,c2=CW*.185,c3=CW*.315,c4=CW*.315;
 
   doc.autoTable({
-    startY: y,
-    margin: { left: ML, right: MR },
-    tableWidth: CW,
-
-    head: [[ col1H, col2H, col3H, col4H ]],
-    body: [[ objetivos, estrategias, desenvolvimento, planejamento ]],
-
-    columnStyles: {
-      0: { cellWidth: c1 },
-      1: { cellWidth: c2 },
-      2: { cellWidth: c3 },
-      3: { cellWidth: c4 }
+    startY:y,
+    margin:{left:ML,right:MR},
+    tableWidth:CW,
+    head:[['OBJETIVOS GERAIS\nE ESPEC\u00cdFICOS','ESTRAT\u00c9GIA(S)','DESENVOLVIMENTO','PLANEJAMENTO / CONDUTA']],
+    body:[[d.objetivos,d.estrategias,d.desenvolvimento,d.planejamento]],
+    columnStyles:{0:{cellWidth:c1},1:{cellWidth:c2},2:{cellWidth:c3},3:{cellWidth:c4}},
+    headStyles:{
+      fillColor:[255,255,255],textColor:[0,0,0],fontStyle:'bold',fontSize:8,
+      halign:'center',valign:'middle',lineWidth:0.4,lineColor:[0,0,0],
+      cellPadding:{top:3,bottom:3,left:2,right:2},minCellHeight:10
     },
-
-    headStyles: {
-      fillColor:   [255, 255, 255],
-      textColor:   [0, 0, 0],
-      fontStyle:   'bold',
-      fontSize:    8,
-      halign:      'center',
-      valign:      'middle',
-      lineWidth:   0.4,
-      lineColor:   [0, 0, 0],
-      cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
-      minCellHeight: 10
+    bodyStyles:{
+      fillColor:[255,255,255],textColor:[0,0,0],fontSize:8,halign:'left',valign:'top',
+      lineWidth:0.4,lineColor:[0,0,0],
+      cellPadding:{top:3,bottom:3,left:2.5,right:2.5},
+      overflow:'linebreak',minCellHeight:tableH-12
     },
-
-    bodyStyles: {
-      fillColor:   [255, 255, 255],
-      textColor:   [0, 0, 0],
-      fontSize:    8,
-      fontStyle:   'normal',
-      halign:      'left',
-      valign:      'top',
-      lineWidth:   0.4,
-      lineColor:   [0, 0, 0],
-      cellPadding: { top: 3, bottom: 3, left: 2.5, right: 2.5 },
-      overflow:    'linebreak',
-      minCellHeight: tableMaxH - 12
-    },
-
-    alternateRowStyles: { fillColor: [255,255,255] },
-    rowPageBreak: 'avoid',
-    showHead: 'everyPage'
+    alternateRowStyles:{fillColor:[255,255,255]},
+    rowPageBreak:'avoid'
   });
 
-  /* ═══ ASSINATURAS ═══ */
-  var finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : PH - 22;
-  var sigY   = Math.min(finalY + 10, PH - 8);
+  // Assinaturas
+  var fy=doc.lastAutoTable?doc.lastAutoTable.finalY:PH-22;
+  var sy=Math.min(fy+10,PH-8);
+  var sx1=ML+CW*.16,sx2=ML+CW*.60,sl=CW*.22;
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.4);
+  doc.line(sx1,sy,sx1+sl,sy);doc.line(sx2,sy,sx2+sl,sy);
+  sf('normal',8);sc(0,0,0);
+  doc.text('Assinatura supervisor(a)',sx1+sl/2,sy+4,{align:'center'});
+  doc.text('Assinatura estagi\u00e1rio(a)',sx2+sl/2,sy+4,{align:'center'});
 
-  var sig1X  = ML + CW * 0.16;
-  var sig2X  = ML + CW * 0.60;
-  var sigLen = CW * 0.22;
+  return doc;
+}
 
-  doc.setDrawColor(0,0,0); doc.setLineWidth(0.4);
-  doc.line(sig1X, sigY, sig1X + sigLen, sigY);
-  doc.line(sig2X, sigY, sig2X + sigLen, sigY);
-
-  sf('normal', 8); sc(0,0,0);
-  doc.text('Assinatura supervisor(a)',  sig1X + sigLen / 2, sigY + 4, { align: 'center' });
-  doc.text('Assinatura estagiário(a)', sig2X + sigLen / 2, sigY + 4, { align: 'center' });
-
-  /* ═══ SALVAR ═══ */
-  var nome = 'RegistroDiario_' + paciente.replace(/\s+/g,'_') + '_' + dtA.replace(/\//g,'-') + '.pdf';
+function baixarPDF(){
+  var d=coletarDados();
+  if(!validar(d)){toast('⚠️ Preencha todos os campos antes de baixar.');return;}
+  toast('Gerando PDF…');
+  var doc=gerarPDF(d);
+  var nome='RegistroDiario_'+d.paciente.replace(/\s+/g,'_')+'_'+fmt(d.dataAtend).replace(/\//g,'-')+'.pdf';
   doc.save(nome);
   toast('✅ PDF gerado com sucesso!');
+}
+
+/* ─────────────────────────────────────────
+   WORD
+───────────────────────────────────────── */
+async function gerarWord(d){
+  var D=docx;
+
+  var bdr={style:D.BorderStyle.SINGLE,size:6,color:'000000'};
+  var allBdr={top:bdr,bottom:bdr,left:bdr,right:bdr};
+
+  function hCell(txt){
+    return new D.TableCell({
+      borders:allBdr,
+      shading:{fill:'FFFFFF',type:D.ShadingType.CLEAR},
+      margins:{top:80,bottom:80,left:100,right:100},
+      verticalAlign:D.VerticalAlign.CENTER,
+      children:[new D.Paragraph({
+        alignment:D.AlignmentType.CENTER,
+        children:[new D.TextRun({text:txt,bold:true,font:'Arial',size:18})]
+      })]
+    });
+  }
+
+  function bCell(txt){
+    return new D.TableCell({
+      borders:allBdr,
+      shading:{fill:'FFFFFF',type:D.ShadingType.CLEAR},
+      margins:{top:80,bottom:80,left:100,right:100},
+      verticalAlign:D.VerticalAlign.TOP,
+      children:[new D.Paragraph({
+        children:[new D.TextRun({text:txt,font:'Arial',size:18})]
+      })]
+    });
+  }
+
+  function bold(lbl){return new D.TextRun({text:lbl,bold:true,font:'Arial',size:18})}
+  function norm(txt){return new D.TextRun({text:txt,font:'Arial',size:18})}
+
+  var documento=new D.Document({
+    sections:[{
+      properties:{
+        page:{
+          size:{width:16838,height:11906,orientation:D.PageOrientation.LANDSCAPE},
+          margin:{top:720,right:720,bottom:720,left:720}
+        }
+      },
+      children:[
+
+        // Cabeçalho: instituição + logo (simulado como texto direita)
+        new D.Paragraph({
+          children:[
+            new D.TextRun({
+              text:'Universidade Tuiuti do Paraná – Clínica de Fonoaudiologia',
+              italics:true,bold:true,font:'Arial',size:17,color:'333333'
+            })
+          ]
+        }),
+
+        new D.Paragraph({
+          border:{bottom:{style:D.BorderStyle.SINGLE,size:4,color:'AAAAAA',space:4}},
+          children:[new D.TextRun({text:''})]
+        }),
+
+        new D.Paragraph({spacing:{after:60},children:[new D.TextRun({text:''})]}),
+
+        // Título
+        new D.Paragraph({
+          alignment:D.AlignmentType.CENTER,
+          spacing:{after:160},
+          children:[new D.TextRun({text:'REGISTRO DIÁRIO',bold:true,font:'Arial',size:26})]
+        }),
+
+        // Paciente
+        new D.Paragraph({
+          spacing:{after:60},
+          children:[bold('NOME DO(A) PACIENTE: '),norm(d.paciente)]
+        }),
+
+        // Estagiário
+        new D.Paragraph({
+          spacing:{after:60},
+          children:[bold('NOME DO(A) ESTAGIÁRIO(A): '),norm(d.estagiario)]
+        }),
+
+        // Datas – tab-alinhadas
+        new D.Paragraph({
+          spacing:{after:160},
+          tabStops:[{type:D.TabStopType.LEFT,position:7200}],
+          children:[
+            bold('DATA DO ATENDIMENTO: '),norm(fmt(d.dataAtend)),
+            new D.TextRun({text:'\t'}),
+            bold('DATA DA ENTREGA DO REGISTRO: '),norm(fmt(d.dataEntrega))
+          ]
+        }),
+
+        // Tabela clínica
+        new D.Table({
+          width:{size:15398,type:D.WidthType.DXA},
+          columnWidths:[2849,2849,4850,4850],
+          rows:[
+            new D.TableRow({
+              children:[
+                hCell('OBJETIVOS GERAIS\nE ESPECÍFICOS'),
+                hCell('ESTRATÉGIA(S)'),
+                hCell('DESENVOLVIMENTO'),
+                hCell('PLANEJAMENTO / CONDUTA')
+              ]
+            }),
+            new D.TableRow({
+              children:[
+                bCell(d.objetivos),
+                bCell(d.estrategias),
+                bCell(d.desenvolvimento),
+                bCell(d.planejamento)
+              ]
+            })
+          ]
+        }),
+
+        // Espaço
+        new D.Paragraph({spacing:{after:480},children:[new D.TextRun({text:''})]}),
+
+        // Assinaturas (tab)
+        new D.Paragraph({
+          tabStops:[{type:D.TabStopType.CENTER,position:5000},{type:D.TabStopType.CENTER,position:11000}],
+          children:[
+            new D.TextRun({text:'\t____________________________________'}),
+            new D.TextRun({text:'\t____________________________________'})
+          ]
+        }),
+        new D.Paragraph({
+          tabStops:[{type:D.TabStopType.CENTER,position:5000},{type:D.TabStopType.CENTER,position:11000}],
+          children:[
+            new D.TextRun({text:'\tAssinatura supervisor(a)',font:'Arial',size:16}),
+            new D.TextRun({text:'\tAssinatura estagiário(a)',font:'Arial',size:16})
+          ]
+        })
+
+      ]
+    }]
+  });
+
+  return await D.Packer.toBlob(documento);
+}
+
+async function baixarWord(){
+  var d=coletarDados();
+  if(!validar(d)){toast('⚠️ Preencha todos os campos antes de baixar.');return;}
+  toast('Gerando Word…');
+  try{
+    var blob=await gerarWord(d);
+    var nome='RegistroDiario_'+d.paciente.replace(/\s+/g,'_')+'_'+fmt(d.dataAtend).replace(/\//g,'-')+'.docx';
+    saveAs(blob,nome);
+    toast('✅ Word gerado com sucesso!');
+  }catch(e){
+    console.error(e);
+    toast('❌ Erro ao gerar Word. Veja o console.');
+  }
+}
+
+async function baixarAmbos(){
+  var d=coletarDados();
+  if(!validar(d)){toast('⚠️ Preencha todos os campos antes de baixar.');return;}
+  toast('Gerando PDF e Word…',4000);
+  // PDF
+  var doc=gerarPDF(d);
+  var nomePDF='RegistroDiario_'+d.paciente.replace(/\s+/g,'_')+'_'+fmt(d.dataAtend).replace(/\//g,'-')+'.pdf';
+  doc.save(nomePDF);
+  // Word (com pequeno delay para não travar)
+  await new Promise(function(r){setTimeout(r,600)});
+  try{
+    var blob=await gerarWord(d);
+    var nomeDoc='RegistroDiario_'+d.paciente.replace(/\s+/g,'_')+'_'+fmt(d.dataAtend).replace(/\//g,'-')+'.docx';
+    saveAs(blob,nomeDoc);
+    toast('✅ PDF e Word baixados!');
+  }catch(e){
+    console.error(e);
+    toast('✅ PDF baixado. Erro no Word — veja console.');
+  }
 }
 </script>
 </body>
