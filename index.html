@@ -8,8 +8,8 @@
 <!-- jsPDF + AutoTable -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<!-- docx.js -->
-<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<!-- docx.js v7 (API estável) -->
+<script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
 <!-- FileSaver -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -319,7 +319,6 @@ body{font-family:var(--font);background:var(--surface2);color:var(--ink);min-hei
 
 </div><!-- /tab-preview -->
 
-<div class="footer">Gerado localmente · nenhum dado é enviado para servidores</div>
 </div><!-- /app -->
 
 <div id="toast"></div>
@@ -522,92 +521,108 @@ function baixarPDF(){
 }
 
 /* ─────────────────────────────────────────
-   WORD
+   WORD  (docx v7 API)
 ───────────────────────────────────────── */
 async function gerarWord(d){
   var D=docx;
 
-  var bdr={style:D.BorderStyle.SINGLE,size:6,color:'000000'};
+  // Bordas da tabela
+  var bdr={style:'single',size:6,color:'000000'};
   var allBdr={top:bdr,bottom:bdr,left:bdr,right:bdr};
 
-  function hCell(txt){
+  // Célula de cabeçalho — aceita array de linhas para quebra manual
+  function hCell(linhas){
+    var children=[];
+    linhas.forEach(function(ln,i){
+      children.push(new D.Paragraph({
+        alignment:'center',
+        spacing:{before:0,after:0},
+        children:[new D.TextRun({text:ln,bold:true,font:{name:'Arial'},size:17})]
+      }));
+    });
     return new D.TableCell({
       borders:allBdr,
-      shading:{fill:'FFFFFF',type:D.ShadingType.CLEAR},
       margins:{top:80,bottom:80,left:100,right:100},
-      verticalAlign:D.VerticalAlign.CENTER,
-      children:[new D.Paragraph({
-        alignment:D.AlignmentType.CENTER,
-        children:[new D.TextRun({text:txt,bold:true,font:'Arial',size:18})]
-      })]
+      verticalAlign:'center',
+      children:children
     });
   }
 
+  // Célula de conteúdo — respeita quebras de linha do textarea
   function bCell(txt){
+    var linhas=(txt||'').split('\n');
+    var children=linhas.map(function(ln){
+      return new D.Paragraph({
+        spacing:{before:0,after:0},
+        children:[new D.TextRun({text:ln,font:{name:'Arial'},size:17})]
+      });
+    });
+    if(children.length===0)children=[new D.Paragraph({children:[new D.TextRun({text:''})]})]
     return new D.TableCell({
       borders:allBdr,
-      shading:{fill:'FFFFFF',type:D.ShadingType.CLEAR},
       margins:{top:80,bottom:80,left:100,right:100},
-      verticalAlign:D.VerticalAlign.TOP,
-      children:[new D.Paragraph({
-        children:[new D.TextRun({text:txt,font:'Arial',size:18})]
-      })]
+      verticalAlign:'top',
+      children:children
     });
   }
 
-  function bold(lbl){return new D.TextRun({text:lbl,bold:true,font:'Arial',size:18})}
-  function norm(txt){return new D.TextRun({text:txt,font:'Arial',size:18})}
+  function bold(lbl){return new D.TextRun({text:lbl,bold:true,font:{name:'Arial'},size:18})}
+  function norm(txt){return new D.TextRun({text:txt,font:{name:'Arial'},size:18})}
 
-  var documento=new D.Document({
+  var doc=new D.Document({
     sections:[{
       properties:{
         page:{
-          size:{width:16838,height:11906,orientation:D.PageOrientation.LANDSCAPE},
+          size:{
+            width:16838,   // A4 landscape (DXA): 297mm
+            height:11906,  // 210mm
+            orientation:'landscape'
+          },
           margin:{top:720,right:720,bottom:720,left:720}
         }
       },
       children:[
 
-        // Cabeçalho: instituição + logo (simulado como texto direita)
+        // Cabeçalho institucional
         new D.Paragraph({
-          children:[
-            new D.TextRun({
-              text:'Universidade Tuiuti do Paraná – Clínica de Fonoaudiologia',
-              italics:true,bold:true,font:'Arial',size:17,color:'333333'
-            })
-          ]
+          spacing:{after:40},
+          children:[new D.TextRun({
+            text:'Universidade Tuiuti do Paran\u00e1 \u2013 Cl\u00ednica de Fonoaudiologia',
+            italics:true,bold:true,font:{name:'Arial'},size:17,color:'333333'
+          })]
         }),
 
+        // Linha divisória (borda inferior no parágrafo)
         new D.Paragraph({
-          border:{bottom:{style:D.BorderStyle.SINGLE,size:4,color:'AAAAAA',space:4}},
+          spacing:{after:80},
+          border:{bottom:{style:'single',size:4,color:'AAAAAA',space:4}},
           children:[new D.TextRun({text:''})]
         }),
 
-        new D.Paragraph({spacing:{after:60},children:[new D.TextRun({text:''})]}),
-
         // Título
         new D.Paragraph({
-          alignment:D.AlignmentType.CENTER,
+          alignment:'center',
           spacing:{after:160},
-          children:[new D.TextRun({text:'REGISTRO DIÁRIO',bold:true,font:'Arial',size:26})]
+          children:[new D.TextRun({
+            text:'REGISTRO DI\u00c1RIO',
+            bold:true,font:{name:'Arial'},size:26
+          })]
         }),
 
-        // Paciente
+        // Dados identificação
         new D.Paragraph({
           spacing:{after:60},
           children:[bold('NOME DO(A) PACIENTE: '),norm(d.paciente)]
         }),
-
-        // Estagiário
         new D.Paragraph({
           spacing:{after:60},
-          children:[bold('NOME DO(A) ESTAGIÁRIO(A): '),norm(d.estagiario)]
+          children:[bold('NOME DO(A) ESTAGI\u00c1RIO(A): '),norm(d.estagiario)]
         }),
 
-        // Datas – tab-alinhadas
+        // Datas com tab stop
         new D.Paragraph({
-          spacing:{after:160},
-          tabStops:[{type:D.TabStopType.LEFT,position:7200}],
+          spacing:{after:180},
+          tabStops:[{type:'left',position:7200}],
           children:[
             bold('DATA DO ATENDIMENTO: '),norm(fmt(d.dataAtend)),
             new D.TextRun({text:'\t'}),
@@ -617,15 +632,16 @@ async function gerarWord(d){
 
         // Tabela clínica
         new D.Table({
-          width:{size:15398,type:D.WidthType.DXA},
+          width:{size:15398,type:'dxa'},
           columnWidths:[2849,2849,4850,4850],
           rows:[
             new D.TableRow({
+              tableHeader:true,
               children:[
-                hCell('OBJETIVOS GERAIS\nE ESPECÍFICOS'),
-                hCell('ESTRATÉGIA(S)'),
-                hCell('DESENVOLVIMENTO'),
-                hCell('PLANEJAMENTO / CONDUTA')
+                hCell(['OBJETIVOS GERAIS','E ESPEC\u00cdFICOS']),
+                hCell(['ESTRAT\u00c9GIA(S)']),
+                hCell(['DESENVOLVIMENTO']),
+                hCell(['PLANEJAMENTO / CONDUTA'])
               ]
             }),
             new D.TableRow({
@@ -639,30 +655,36 @@ async function gerarWord(d){
           ]
         }),
 
-        // Espaço
-        new D.Paragraph({spacing:{after:480},children:[new D.TextRun({text:''})]}),
+        // Espaço antes das assinaturas
+        new D.Paragraph({spacing:{after:560},children:[new D.TextRun({text:''})]}),
 
-        // Assinaturas (tab)
+        // Linhas de assinatura
         new D.Paragraph({
-          tabStops:[{type:D.TabStopType.CENTER,position:5000},{type:D.TabStopType.CENTER,position:11000}],
+          tabStops:[
+            {type:'center',position:3800},
+            {type:'center',position:11600}
+          ],
           children:[
-            new D.TextRun({text:'\t____________________________________'}),
-            new D.TextRun({text:'\t____________________________________'})
+            new D.TextRun({text:'\t_________________________________'}),
+            new D.TextRun({text:'\t_________________________________'})
           ]
         }),
         new D.Paragraph({
-          tabStops:[{type:D.TabStopType.CENTER,position:5000},{type:D.TabStopType.CENTER,position:11000}],
+          tabStops:[
+            {type:'center',position:3800},
+            {type:'center',position:11600}
+          ],
+          spacing:{before:80},
           children:[
-            new D.TextRun({text:'\tAssinatura supervisor(a)',font:'Arial',size:16}),
-            new D.TextRun({text:'\tAssinatura estagiário(a)',font:'Arial',size:16})
+            new D.TextRun({text:'\tAssinatura supervisor(a)',font:{name:'Arial'},size:16}),
+            new D.TextRun({text:'\tAssinatura estagi\u00e1rio(a)',font:{name:'Arial'},size:16})
           ]
         })
-
       ]
     }]
   });
 
-  return await D.Packer.toBlob(documento);
+  return await D.Packer.toBlob(doc);
 }
 
 async function baixarWord(){
