@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerador de Relatórios</title>
+</head>
+
+<body>
+
+  <h2>Gerador de Relatórios</h2>
+
+  <label>Nome do(a) Paciente:</label><br>
+  <input id="paciente" type="text"><br><br>
+
+  <label>Nome do(a) Estagiário(a):</label><br>
+  <input id="estagiario" type="text"><br><br>
+
+  <label>Data do Atendimento:</label><br>
+  <input id="dataAtendimento" type="date"><br><br>
+
+  <label>Data da Entrega do Registro:</label><br>
+  <input id="dataEntrega" type="date"><br><br>
+
+  <label>Objetivos Gerais e Específicos:</label><br>
+  <textarea id="objetivos" rows="4"></textarea><br><br>
+
+  <label>Estratégia:</label><br>
+  <textarea id="estrategia" rows="4"></textarea><br><br>
+
+  <label>Desenvolvimento:</label><br>
+  <textarea id="desenvolvimento" rows="6"></textarea><br><br>
+
+  <label>Planejamento / Conduta:</label><br>
+  <textarea id="planejamento" rows="4"></textarea><br><br>
+
+  <button onclick="gerarPDF()">Gerar PDF</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    function gerarPDF() {
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      let paciente = document.getElementById("paciente").value;
+      let estagiario = document.getElementById("estagiario").value;
+      let dataAtendimento = document.getElementById("dataAtendimento").value;
+      let dataEntrega = document.getElementById("dataEntrega").value;
+
+      let objetivos = document.getElementById("objetivos").value;
+      let estrategia = document.getElementById("estrategia").value;
+      let desenvolvimento = document.getElementById("desenvolvimento").value;
+      let planejamento = document.getElementById("planejamento").value;
+
+      doc.setFontSize(12);
+
+      doc.text("RELATÓRIO DE ATENDIMENTO", 20, 20);
+
+      doc.text("Paciente: " + paciente, 20, 35);
+      doc.text("Estagiário(a): " + estagiario, 20, 45);
+      doc.text("Data do Atendimento: " + dataAtendimento, 20, 55);
+      doc.text("Data da Entrega: " + dataEntrega, 20, 65);
+
+      doc.text("Objetivos:", 20, 80);
+      doc.text(objetivos, 20, 90);
+
+      doc.text("Estratégia:", 20, 120);
+      doc.text(estrategia, 20, 130);
+
+      doc.text("Desenvolvimento:", 20, 160);
+      doc.text(desenvolvimento, 20, 170);
+
+      doc.text("Planejamento / Conduta:", 20, 200);
+      doc.text(planejamento, 20, 210);
+
+      doc.save("Relatorio_" + paciente + ".pdf");
+    }
+  </script>
+
+</body>
+</html>
