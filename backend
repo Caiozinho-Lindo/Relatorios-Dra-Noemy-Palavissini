@@ -1,0 +1,29 @@
+from flask import Flask, request, send_file
+from docxtpl import DocxTemplate
+
+app = Flask(__name__)
+
+@app.route("/gerar-docx", methods=["POST"])
+def gerar_docx():
+    data = request.json
+
+    doc = DocxTemplate("templates/RegistroDiario_Template.docx")
+
+    doc.render({
+        "paciente": data["paciente"],
+        "estagiario": data["estagiario"],
+        "dataAtend": data["dataAtend"],
+        "dataEntrega": data["dataEntrega"],
+        "objetivos": data["objetivos"],
+        "estrategias": data["estrategias"],
+        "desenvolvimento": data["desenvolvimento"],
+        "planejamento": data["planejamento"]
+    })
+
+    output_path = "relatorio.docx"
+    doc.save(output_path)
+
+    return send_file(output_path, as_attachment=True)
+
+if __name__ == "__main__":
+    app.run(debug=True)
